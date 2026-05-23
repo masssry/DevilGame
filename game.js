@@ -12,6 +12,18 @@ const deathsText = document.getElementById("deaths");
 const hpText = document.getElementById("hp");
 const winScreen = document.getElementById("winScreen");
 
+const leftBtn = document.getElementById("leftBtn");
+const rightBtn = document.getElementById("rightBtn");
+const jumpBtn = document.getElementById("jumpBtn");
+const dashBtn = document.getElementById("dashBtn");
+
+const jumpSound = new Audio("sounds/jump.mp3");
+const hitSound = new Audio("sounds/hit.mp3");
+const music = new Audio("sounds/music.mp3");
+const dashSound = new Audio("sounds/dash.mp3");
+
+music.loop = true;
+
 let gravity = 0.8;
 let deaths = 0;
 let currentLevel = 0;
@@ -26,9 +38,8 @@ const keys = {
 const player = {
   x:100,
   y:100,
-  w:40,
-  h:40,
-  color:"cyan",
+  w:50,
+  h:70,
   dx:0,
   dy:0,
   speed:6,
@@ -36,104 +47,72 @@ const player = {
   grounded:false
 };
 
-let checkpointX = 100;
-let checkpointY = 100;
+const level = {
+  platforms:[
+    {x:0,y:650,w:500,h:50},
+    {x:700,y:550,w:250,h:50},
+    {x:1100,y:450,w:250,h:50}
+  ],
 
-const levels = [
-  {
-    platforms:[
-      {x:0,y:650,w:500,h:50},
-      {x:650,y:550,w:250,h:50},
-      {x:1000,y:450,w:250,h:50},
-      {x:1400,y:350,w:250,h:50}
-    ],
+  spikes:[
+    {x:550,y:620,w:100,h:30},
+    {x:980,y:620,w:100,h:30}
+  ],
 
-    spikes:[
-      {x:520,y:620,w:100,h:30},
-      {x:900,y:620,w:100,h:30}
-    ],
+  enemies:[
+    {x:800,y:610,w:50,h:50,dir:1}
+  ],
 
-    goal:{x:1500,y:280,w:50,h:70}
-  },
-
-  {
-    platforms:[
-      {x:0,y:650,w:300,h:50},
-      {x:450,y:560,w:200,h:50},
-      {x:750,y:470,w:200,h:50},
-      {x:1100,y:380,w:200,h:50}
-    ],
-
-    spikes:[
-      {x:320,y:620,w:100,h:30},
-      {x:680,y:620,w:100,h:30},
-      {x:1000,y:620,w:100,h:30}
-    ],
-
-    goal:{x:1300,y:300,w:50,h:70}
-  }
-];
-
-const enemies = [
-  {
-    x:800,
-    y:610,
-    w:40,
-    h:40,
-    dir:1
-  }
-];
-
-const movingTraps = [
-  {
-    x:1000,
-    y:500,
-    w:100,
-    h:20,
-    dir:1
-  }
-];
-
-const checkpoints = [
-  {
-    x:900,
-    y:570,
-    active:false
-  }
-];
+  goal:{x:1400,y:360,w:60,h:90}
+};
 
 function startGame(){
+
   menu.style.display = "none";
   hud.style.display = "block";
-  loadLevel(0);
+
+  music.play();
+
   animate();
 }
 
 startBtn.onclick = startGame;
 
-function loadLevel(index){
-
-  currentLevel = index;
-
-  player.x = 100;
-  player.y = 100;
-  player.dy = 0;
-
-  checkpointX = 100;
-  checkpointY = 100;
-
-  levelText.innerText = index + 1;
-}
-
 function drawPlayer(){
 
-  ctx.shadowBlur = 20;
-  ctx.shadowColor = "cyan";
+  ctx.save();
 
-  ctx.fillStyle = player.color;
-  ctx.fillRect(player.x,player.y,player.w,player.h);
+  ctx.translate(player.x,player.y);
 
-  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#00e5ff";
+
+  // الرأس
+  ctx.beginPath();
+  ctx.arc(25,15,15,0,Math.PI*2);
+  ctx.fill();
+
+  // الجسم
+  ctx.fillRect(18,30,15,25);
+
+  // الرجل
+  ctx.strokeStyle = "cyan";
+  ctx.lineWidth = 5;
+
+  ctx.beginPath();
+
+  ctx.moveTo(22,55);
+  ctx.lineTo(15,70);
+
+  ctx.moveTo(28,55);
+  ctx.lineTo(35,70);
+
+  // اليد
+  ctx.moveTo(10,40);
+  ctx.lineTo(40,40);
+
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 function updatePlayer(){
@@ -150,12 +129,9 @@ function updatePlayer(){
 
   player.grounded = false;
 
-  const lvl = levels[currentLevel];
+  level.platforms.forEach(p=>{
 
-  lvl.platforms.forEach(p=>{
-
-    ctx.fillStyle = "#333";
-    ctx.fillRect(p.x,p.y,p.w,p.h);
+    drawPlatform(p);
 
     if(
       player.x < p.x + p.w &&
@@ -165,6 +141,7 @@ function updatePlayer(){
     ){
 
       if(player.dy > 0){
+
         player.y = p.y - player.h;
         player.dy = 0;
         player.grounded = true;
@@ -173,20 +150,9 @@ function updatePlayer(){
     }
   });
 
-  lvl.spikes.forEach(s=>{
+  level.spikes.forEach(s=>{
 
-    ctx.fillStyle = "red";
-
-    for(let i=0;i<5;i++){
-
-      ctx.beginPath();
-
-      ctx.moveTo(s.x + i*20, s.y + s.h);
-      ctx.lineTo(s.x + 10 + i*20, s.y);
-      ctx.lineTo(s.x + 20 + i*20, s.y + s.h);
-
-      ctx.fill();
-    }
+    drawSpikes(s);
 
     if(
       player.x < s.x + s.w &&
@@ -198,37 +164,15 @@ function updatePlayer(){
     }
   });
 
-  const g = lvl.goal;
+  level.enemies.forEach(e=>{
 
-  ctx.fillStyle = "lime";
-  ctx.fillRect(g.x,g.y,g.w,g.h);
-
-  if(
-    player.x < g.x + g.w &&
-    player.x + player.w > g.x &&
-    player.y < g.y + g.h &&
-    player.y + player.h > g.y
-  ){
-    nextLevel();
-  }
-
-  if(player.y > canvas.height){
-    die();
-  }
-}
-
-function drawEnemies(){
-
-  enemies.forEach(e=>{
+    drawEnemy(e);
 
     e.x += 3 * e.dir;
 
     if(e.x > 1200 || e.x < 700){
       e.dir *= -1;
     }
-
-    ctx.fillStyle = "purple";
-    ctx.fillRect(e.x,e.y,e.w,e.h);
 
     if(
       player.x < e.x + e.w &&
@@ -239,56 +183,82 @@ function drawEnemies(){
       damage();
     }
   });
+
+  drawGoal(level.goal);
+
+  if(
+    player.x < level.goal.x + level.goal.w &&
+    player.x + player.w > level.goal.x &&
+    player.y < level.goal.y + level.goal.h &&
+    player.y + player.h > level.goal.y
+  ){
+
+    winScreen.style.display = "flex";
+  }
 }
 
-function drawMovingTraps(){
+function drawPlatform(p){
 
-  movingTraps.forEach(t=>{
+  ctx.fillStyle = "#222";
+  ctx.fillRect(p.x,p.y,p.w,p.h);
 
-    t.x += 5 * t.dir;
+  ctx.fillStyle = "#444";
 
-    if(t.x > 1300 || t.x < 800){
-      t.dir *= -1;
-    }
+  for(let i=0;i<p.w;i+=40){
 
-    ctx.fillStyle = "orange";
-    ctx.fillRect(t.x,t.y,t.w,t.h);
-
-    if(
-      player.x < t.x + t.w &&
-      player.x + player.w > t.x &&
-      player.y < t.y + t.h &&
-      player.y + player.h > t.y
-    ){
-      damage();
-    }
-  });
+    ctx.fillRect(p.x+i,p.y,20,10);
+  }
 }
 
-function drawCheckpoints(){
+function drawSpikes(s){
 
-  checkpoints.forEach(c=>{
+  ctx.fillStyle = "red";
 
-    ctx.fillStyle = c.active ? "lime" : "gray";
+  for(let i=0;i<5;i++){
 
-    ctx.fillRect(c.x,c.y,30,80);
+    ctx.beginPath();
 
-    if(
-      player.x < c.x + 30 &&
-      player.x + player.w > c.x &&
-      player.y < c.y + 80 &&
-      player.y + player.h > c.y
-    ){
+    ctx.moveTo(s.x + i*20, s.y+s.h);
+    ctx.lineTo(s.x+10+i*20,s.y);
+    ctx.lineTo(s.x+20+i*20,s.y+s.h);
 
-      c.active = true;
+    ctx.fill();
+  }
+}
 
-      checkpointX = c.x;
-      checkpointY = c.y;
-    }
-  });
+function drawEnemy(e){
+
+  ctx.fillStyle = "purple";
+
+  ctx.beginPath();
+
+  ctx.arc(e.x+25,e.y+25,25,0,Math.PI*2);
+
+  ctx.fill();
+
+  ctx.fillStyle = "white";
+
+  ctx.beginPath();
+  ctx.arc(e.x+18,e.y+20,5,0,Math.PI*2);
+
+  ctx.arc(e.x+32,e.y+20,5,0,Math.PI*2);
+
+  ctx.fill();
+}
+
+function drawGoal(g){
+
+  ctx.fillStyle = "lime";
+  ctx.fillRect(g.x,g.y,g.w,g.h);
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(g.x+20,g.y,10,g.h);
 }
 
 function damage(){
+
+  hitSound.currentTime = 0;
+  hitSound.play();
 
   hp--;
 
@@ -301,60 +271,18 @@ function damage(){
   },100);
 
   if(hp <= 0){
+
+    deaths++;
+
+    deathsText.innerText = deaths;
+
     hp = 3;
+
     hpText.innerText = hp;
-    die();
+
+    player.x = 100;
+    player.y = 100;
   }
-}
-
-function die(){
-
-  deaths++;
-
-  deathsText.innerText = deaths;
-
-  player.x = checkpointX;
-  player.y = checkpointY;
-
-  player.dy = 0;
-}
-
-function bossFight(){
-
-  ctx.fillStyle = "darkred";
-
-  ctx.fillRect(1400,200,200,200);
-
-  ctx.fillStyle = "red";
-
-  for(let i=0;i<5;i++){
-
-    ctx.beginPath();
-
-    ctx.arc(
-      1400 + Math.random()*200,
-      400 + Math.random()*200,
-      20,
-      0,
-      Math.PI*2
-    );
-
-    ctx.fill();
-  }
-}
-
-function nextLevel(){
-
-  currentLevel++;
-
-  if(currentLevel >= levels.length){
-
-    winScreen.style.display = "flex";
-
-    return;
-  }
-
-  loadLevel(currentLevel);
 }
 
 function animate(){
@@ -363,9 +291,10 @@ function animate(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle = "rgba(255,0,0,0.03)";
+  // الخلفية
+  for(let i=0;i<120;i++){
 
-  for(let i=0;i<100;i++){
+    ctx.fillStyle = "rgba(255,0,0,0.08)";
 
     ctx.fillRect(
       Math.random()*canvas.width,
@@ -375,43 +304,74 @@ function animate(){
     );
   }
 
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
   updatePlayer();
 
-  drawEnemies();
-
-  drawMovingTraps();
-
-  drawCheckpoints();
-
   drawPlayer();
-
-  if(currentLevel === 1){
-    bossFight();
-  }
 }
 
-addEventListener("keydown", e=>{
+addEventListener("keydown",e=>{
 
-  if(e.key === "a") keys.left = true;
-  if(e.key === "d") keys.right = true;
+  if(e.key==="a") keys.left=true;
+  if(e.key==="d") keys.right=true;
 
-  if((e.key === "w" || e.key === " ") && jumps < 2){
+  if((e.key==="w" || e.key===" ") && jumps < 2){
 
     player.dy = player.jump;
 
     jumps++;
+
+    jumpSound.currentTime = 0;
+    jumpSound.play();
   }
 
-  if(e.key === "Shift"){
+  if(e.key==="Shift"){
+
     player.x += 120;
+
+    dashSound.currentTime = 0;
+    dashSound.play();
   }
 });
 
-addEventListener("keyup", e=>{
+addEventListener("keyup",e=>{
 
-  if(e.key === "a") keys.left = false;
-  if(e.key === "d") keys.right = false;
+  if(e.key==="a") keys.left=false;
+  if(e.key==="d") keys.right=false;
+});
+
+leftBtn.addEventListener("touchstart",()=>{
+  keys.left=true;
+});
+
+leftBtn.addEventListener("touchend",()=>{
+  keys.left=false;
+});
+
+rightBtn.addEventListener("touchstart",()=>{
+  keys.right=true;
+});
+
+rightBtn.addEventListener("touchend",()=>{
+  keys.right=false;
+});
+
+jumpBtn.addEventListener("touchstart",()=>{
+
+  if(jumps < 2){
+
+    player.dy = player.jump;
+
+    jumps++;
+
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+  }
+});
+
+dashBtn.addEventListener("touchstart",()=>{
+
+  player.x += 120;
+
+  dashSound.currentTime = 0;
+  dashSound.play();
 });
