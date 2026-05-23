@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EVIL TRAP</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="menu">
+  <h1>EVIL TRAP</h1>
+  <button id="startBtn">START GAME</button>
+</div>
+
+<div id="hud">
+  <div>Level: <span id="level">1</span></div>
+  <div>Deaths: <span id="deaths">0</span></div>
+  <div>HP: <span id="hp">3</span></div>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="winScreen">
+  <h1>YOU ESCAPED</h1>
+  <button onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
