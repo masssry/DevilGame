@@ -12,7 +12,7 @@ body{
 
 canvas{
   display:block;
-  background:#111;
+  background:linear-gradient(to bottom,#050505,#111);
 }
 
 #menu,
@@ -43,7 +43,6 @@ button{
   color:white;
   font-size:22px;
   border-radius:12px;
-  cursor:pointer;
 }
 
 #hud{
@@ -52,10 +51,28 @@ button{
   left:20px;
   color:white;
   z-index:5;
-  font-size:24px;
+  font-size:22px;
   display:none;
 }
 
 #winScreen{
   display:none;
+}
+
+#mobileControls{
+  position:fixed;
+  bottom:20px;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  z-index:20;
+}
+
+#mobileControls button{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  font-size:28px;
+  background:rgba(255,0,0,0.6);
 }
